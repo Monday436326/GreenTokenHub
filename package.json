@@ -10,14 +10,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hashgraph/hedera-wallet-connect": "^1.4.2",
+    "@hashgraph/proto": "^2.16.0-beta.4",
+    "@hashgraph/sdk": "^2.56.0",
+    "@walletconnect/modal": "^2.7.0",
+    "@walletconnect/modal-core": "^2.7.0",
+    "@walletconnect/qrcode-modal": "^1.8.0",
+    "@walletconnect/utils": "^2.17.3",
+    "framer-motion": "^11.0.8",
     "lucide-react": "^0.344.0",
+    "mapbox-gl": "^3.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-intersection-observer": "^9.8.1",
-    "framer-motion": "^11.0.8",
-    "react-router-dom": "^6.22.2",
     "react-map-gl": "^7.1.7",
-    "mapbox-gl": "^3.1.2"
+    "react-router-dom": "^6.22.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
