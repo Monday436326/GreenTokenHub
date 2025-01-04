@@ -1,7 +1,14 @@
 import React from 'react';
 import { ArrowRight, Play } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
 const Hero: React.FC = () => {
+
+  const navigate = useNavigate();
+
+  const handleLaunchClick = () => {
+    navigate("/dapp"); // Navigate to /app
+  };
   return (
     <section className="relative h-screen flex items-center justify-center overflow-hidden">
       <video
@@ -26,14 +33,14 @@ const Hero: React.FC = () => {
           Join the revolution in carbon credit trading with blockchain technology
         </p>
         <div className="flex flex-col sm:flex-row gap-6 justify-center">
-          <button className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center gap-2 transition-all transform hover:scale-105">
+          <button onClick={handleLaunchClick} className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center gap-2 transition-all transform hover:scale-105">
             Start Tokenizing
             <ArrowRight className="w-5 h-5" />
           </button>
-          <button className="px-8 py-4 border-2 border-white text-white rounded-full flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
+          {/* <button className="px-8 py-4 border-2 border-white text-white rounded-full flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
             Learn How It Works
             <Play className="w-5 h-5" />
-          </button>
+          </button> */}
         </div>
       </div>
     </section>
