@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const Navigation: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const isDappRoute = location.pathname === '/dapp';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,25 +28,29 @@ const Navigation: React.FC = () => {
             GreenToken<span className="text-green-400">Hub</span>
           </Link>
 
-          <div className="hidden md:flex items-center space-x-8">
-            <NavLinks />
-            <Link
-              to="/dapp"
-              className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
-            >
-              Launch App
-            </Link>
-          </div>
+          {!isDappRoute && (
+            <>
+              <div className="hidden md:flex items-center space-x-8">
+                <NavLinks />
+                <Link
+                  to="/dapp"
+                  className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
+                >
+                  Launch App
+                </Link>
+              </div>
 
-          <button
-            className="md:hidden text-white"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+              <button
+                className="md:hidden text-white"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </>
+          )}
         </div>
 
-        {isMobileMenuOpen && (
+        {!isDappRoute && isMobileMenuOpen && (
           <div className="md:hidden mt-4">
             <div className="flex flex-col space-y-4">
               <NavLinks />
@@ -72,9 +79,6 @@ const NavLinks: React.FC = () => (
     <a href="#benefits" className="text-gray-300 hover:text-white transition-colors">
       Benefits
     </a>
-    {/* <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">
-      Pricing
-    </a> */}
   </>
 );
 

@@ -2,130 +2,108 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
-import { Wallet } from 'lucide-react';
+import { Wallet, Loader2 } from 'lucide-react';
 import WalletInfo from '../components/dapp/WalletInfo';
 import TokenizationForm from '../components/dapp/TokenizationForm';
 import MarketplaceListing from '../components/dapp/MarketplaceListing';
 import ProjectTracker from '../components/dapp/ProjectTracker';
-import { ConnectWalletProps } from '../types/dapp';
-import { DAppConnector, HederaSessionEvent, HederaJsonRpcMethod, HederaChainId } from '@hashgraph/hedera-wallet-connect';
-import { LedgerId } from '@hashgraph/sdk';
-import { Core } from '@walletconnect/core';
-import { Web3Wallet } from '@walletconnect/web3wallet';
+import { ContractFactory, NETWORK_CONFIGS } from '../utils/contractFactory';
+import type { 
+  NetworkType, 
+  ConnectWalletProps,
+  TokenizationFormProps,
+  MarketplaceListingProps,
+  ProjectTrackerProps
+} from '../types/dapp';
 
 const DApp: React.FC = () => {
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
-  const [connector, setConnector] = useState<DAppConnector | null>(null);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  
+  const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
+  const [walletAddress, setWalletAddress] = useState<string>('');
+  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('bscTestnet');
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [contractFactory, setContractFactory] = useState<ContractFactory | null>(null);
+
   useEffect(() => {
-    const init = async () => {
-      try {
-        const projectId = '0a4f8da85fc03a4b02efcbf34fb6b818';
-        if (!projectId) {
-          throw new Error('WalletConnect project ID not found');
-        }
-
-        const core = new Core({
-          projectId,
-          relayUrl: 'wss://relay.walletconnect.org',
-        });
-
-        await Web3Wallet.init({
-          core,
-          metadata: {
-            name: "GreenTokenHub",
-            description: "Dapp",
-            url: window.location.origin,
-            icons: ["https://your-icon-url.com/icon.png"]
-          }
-        });
-
-        const dAppConnector = new DAppConnector(
-          {
-            name: "GreenTokenHub",
-            description: "DApp",
-            url: window.location.origin,
-            icons: ["https://your-icon-url.com/icon.png"]
-          },
-          LedgerId.TESTNET,
-          projectId, 
-          Object.values(HederaJsonRpcMethod),
-          [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
-          [HederaChainId.Testnet],
-          { relayUrl: 'wss://relay.walletconnect.org' }
-        );
-
-        await dAppConnector.init();
-        setConnector(dAppConnector);
-        setConnectionError(null);
-
-        // Check for existing sessions
-        const existingSessions = dAppConnector.walletConnectClient?.session.getAll() || [];
-        if (existingSessions.length > 0) {
-          const lastSession = existingSessions[existingSessions.length - 1];
-          const accountId = lastSession.namespaces.hedera?.accounts[0].split(':')[2];
-          if (accountId) {
-            setWalletAddress(accountId);
-            setIsWalletConnected(true);
-          }
-        }
-
-      } catch (error) {
-        console.error('Error initializing DAppConnector:', error);
-        setConnectionError(error instanceof Error ? error.message : 'Failed to initialize wallet connection');
-      }
-    };
-
-    init();
-
-    return () => {
-      if (connector) {
-        connector.disconnectAll();
-      }
-    };
-  }, []);
-
+    const factory = new ContractFactory(selectedNetwork);
+    setContractFactory(factory);
+  }, [selectedNetwork]);
 
   const connectWallet = async () => {
-    if (!connector) {
-      setConnectionError('Wallet connector not initialized');
-      return;
-    }
+    if (!contractFactory) return;
+    
+    setIsConnecting(true);
+    setError(null);
 
     try {
-      const session = await connector.openModal();
-      if (!session.namespaces.hedera?.accounts?.[0]) {
-        throw new Error('No Hedera account found in session');
-      }
-      const accountId = session.namespaces.hedera.accounts[0].split(':')[2];
-      setWalletAddress(accountId);
+      const address = await contractFactory.connect();
+      setWalletAddress(address);
       setIsWalletConnected(true);
-      setConnectionError(null);
-    } catch (error) {
-      console.error('Wallet connection failed:', error);
-      setConnectionError(error instanceof Error ? error.message : 'Failed to connect wallet');
+    } catch (err) {
+      console.error('Failed to connect wallet:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect wallet');
+    } finally {
+      setIsConnecting(false);
     }
+  };
+
+  const handleNetworkChange = async (network: NetworkType) => {
+    setSelectedNetwork(network);
+    setIsWalletConnected(false);
+    setWalletAddress('');
+    setError(null);
+    
+    const factory = new ContractFactory(network);
+    setContractFactory(factory);
+  };
+
+  const tokenizationProps: TokenizationFormProps = {
+    network: selectedNetwork,
+    walletAddress,
+    contractFactory
+  };
+
+  const marketplaceProps: MarketplaceListingProps = {
+    network: selectedNetwork,
+    walletAddress,
+    contractFactory
+  };
+
+  const projectTrackerProps: ProjectTrackerProps = {
+    network: selectedNetwork,
+    walletAddress,
+    contractFactory
   };
 
   return (
     <div className="min-h-screen bg-gray-900">
       <Navigation />
       
-      {isWalletConnected && <WalletInfo address={walletAddress} />}
+      {isWalletConnected && (
+        <WalletInfo 
+          address={walletAddress}
+          network={selectedNetwork}
+          networkName={NETWORK_CONFIGS[selectedNetwork].name}
+        />
+      )}
       
       <main className="pt-24 pb-20">
         <div className="container mx-auto px-4">
           {!isWalletConnected ? (
-            <ConnectWallet onConnect={connectWallet} />
+            <ConnectWallet 
+              onConnect={connectWallet}
+              onNetworkChange={handleNetworkChange}
+              selectedNetwork={selectedNetwork}
+              isConnecting={isConnecting}
+              error={error}
+            />
           ) : (
             <div className="space-y-8">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <TokenizationForm />
-                <MarketplaceListing />
+                <TokenizationForm {...tokenizationProps} />
+                <MarketplaceListing {...marketplaceProps} />
               </div>
-              <ProjectTracker />
+              <ProjectTracker {...projectTrackerProps} />
             </div>
           )}
         </div>
@@ -136,7 +114,13 @@ const DApp: React.FC = () => {
   );
 };
 
-const ConnectWallet: React.FC<ConnectWalletProps> = ({ onConnect }) => {
+const ConnectWallet: React.FC<ConnectWalletProps> = ({
+  onConnect,
+  onNetworkChange,
+  selectedNetwork,
+  isConnecting,
+  error
+}) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
       <motion.div
@@ -146,15 +130,50 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({ onConnect }) => {
       >
         <Wallet className="w-16 h-16 text-green-400 mx-auto mb-6" />
         <h2 className="text-2xl font-bold text-white mb-4">Connect Your Wallet</h2>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="mb-6">
+          <label className="block text-gray-300 mb-2">Select Network</label>
+          <select
+            value={selectedNetwork}
+            onChange={(e) => onNetworkChange(e.target.value as NetworkType)}
+            className="w-full bg-gray-700 text-white rounded-lg p-3 mb-6"
+            disabled={isConnecting}
+          >
+            <option value="bscTestnet">BSC Testnet</option>
+            <option value="hederaTestnet">Hedera Testnet</option>
+          </select>
+        </div>
+
         <p className="text-gray-300 mb-8">
           Connect your wallet to start trading carbon credits on the GreenToken Hub
           platform.
         </p>
+        
         <button
           onClick={onConnect}
-          className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-full font-semibold transition-colors"
+          disabled={isConnecting}
+          className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:bg-green-500/50 
+            text-white rounded-full font-semibold transition-colors flex items-center justify-center space-x-2"
         >
-          Connect Wallet
+          {isConnecting ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Connecting...</span>
+            </>
+          ) : (
+            <>
+              <Wallet className="w-5 h-5" />
+              <span>
+                Connect {selectedNetwork === 'hederaTestnet' ? 'Hedera' : 'BSC'} Wallet
+              </span>
+            </>
+          )}
         </button>
       </motion.div>
     </div>
